@@ -1,0 +1,14 @@
+build/
+obj_dir/
+bin/
+
+*.vcd
+*.wave
+*.log
+
+*.o
+*.d
+
+.nvim/
+.DS_Store
+*.swp
