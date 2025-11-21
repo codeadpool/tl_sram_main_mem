@@ -155,7 +155,8 @@ module tl_sram_ctrl #(
   ) u_ram (
       .clk    (clk_i),
       .we_i   (mem_we),
-      .addr_i (mem_addr[ADDR_WIDTH-1:3]),  // Byte =-> Word Address
+      // padding 29 to 32 for verilator Lint
+      .addr_i ({3'b0, mem_addr[ADDR_WIDTH-1:3]}),  // Byte =-> Word Address
       .wdata_i(mem_wdata),
       .wmask_i(mem_wmask),
       .rdata_o(mem_rdata)
@@ -205,6 +206,7 @@ module tl_sram_ctrl #(
       q_rd_ptr           <= 0;
       tl_d_valid         <= 0;
       tl_d_corrupt       <= 0;
+      tl_d_param         <= 0;
       stat_read_cnt      <= 0;
       stat_write_cnt     <= 0;
       stat_total_latency <= 0;
@@ -214,6 +216,7 @@ module tl_sram_ctrl #(
       // Default Control
       mem_we     <= 0;
       tl_d_valid <= 0;
+      tl_d_param <= 0;
 
       case (state)
         // --- S_IDLE: Dispatch Transaction ---
@@ -325,6 +328,7 @@ module tl_sram_ctrl #(
 
           if (tl_d_ready) state <= S_IDLE;
         end
+        default: state <= S_IDLE;
       endcase
     end
   end
