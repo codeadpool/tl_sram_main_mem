@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   // Write 0xDEADBEEF to 0x100
   printf("[INFO] Write...\n");
   top->tl_a_valid = 1;
-  top->tl_a_opcode = 1; // PutFull
+  top->tl_a_opcode = 0; // PutFull
   top->tl_a_size = 3;   // 8 bytes
   top->tl_a_source = 1;
   top->tl_a_address = 0x100;
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   // Read 0x100
   printf("[INFO] Read...\n");
   top->tl_a_valid = 1;
-  top->tl_a_opcode = 0; // Get
+  top->tl_a_opcode = 4; // Get
   top->tl_a_size = 3;
   top->tl_a_source = 2;
   top->tl_a_address = 0x100;

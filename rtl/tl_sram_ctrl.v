@@ -55,11 +55,25 @@ module tl_sram_ctrl #(
   // ---------------------------------------------------------
   // Constants & Functions
   // ---------------------------------------------------------
-  localparam OP_GET = 3'b000;
-  localparam OP_PUTFULL = 3'b001;
-  localparam OP_PUTPART = 3'b010;
-  localparam OP_ACK = 3'b000;
-  localparam OP_ACKDATA = 3'b001;
+  // Channel A
+  localparam OP_PUTFULL = 3'd0;
+  localparam OP_PUTPART = 3'd1;
+  localparam OP_GET = 3'd4;
+
+  // Channel D
+  localparam OP_ACK = 3'd0;  // AccessAck
+  localparam OP_ACKDATA = 3'd1;  // AccessAckData
+
+  // ---------------------------------------------------------
+  // Verilog-2001 Helper Functions
+  // ---------------------------------------------------------
+  function integer clog2;
+    input [31:0] value;
+    begin
+      value = value - 1;
+      for (clog2 = 0; value > 0; clog2 = clog2 + 1) value = value >> 1;
+    end
+  endfunction
 
   // Calculate burst beats based on size: 2^(size-3)
   function [8:0] calc_beats;
@@ -71,7 +85,7 @@ module tl_sram_ctrl #(
   endfunction
 
   // ---------------------------------------------------------
-  // Parameter Validation
+  // Parameter Validation (Sim only)
   // ---------------------------------------------------------
   // synthesis translate_off
   initial begin
@@ -86,22 +100,24 @@ module tl_sram_ctrl #(
   // A singl circular buffer is used to guarantee strict ordering.
   // Prevents Read-After-Write hazards inherent in single-port RAMs.
 
-  reg  [                    2:0] q_opcode                          [0:QUEUE_DEPTH-1];
-  reg  [                    2:0] q_size                            [0:QUEUE_DEPTH-1];
-  reg  [       SOURCE_WIDTH-1:0] q_source                          [0:QUEUE_DEPTH-1];
-  reg  [         ADDR_WIDTH-1:0] q_addr                            [0:QUEUE_DEPTH-1];
-  reg  [         DATA_WIDTH-1:0] q_data                            [0:QUEUE_DEPTH-1];
-  reg  [                    7:0] q_mask                            [0:QUEUE_DEPTH-1];
-  reg  [                   63:0] q_timestamp                       [0:QUEUE_DEPTH-1];
+  localparam PTR_WIDTH = clog2(QUEUE_DEPTH);
+  reg  [             2:0] q_opcode                          [0:QUEUE_DEPTH-1];
+  reg  [             2:0] q_size                            [0:QUEUE_DEPTH-1];
+  reg  [SOURCE_WIDTH-1:0] q_source                          [0:QUEUE_DEPTH-1];
+  reg  [  ADDR_WIDTH-1:0] q_addr                            [0:QUEUE_DEPTH-1];
+  reg  [  DATA_WIDTH-1:0] q_data                            [0:QUEUE_DEPTH-1];
+  reg  [             7:0] q_mask                            [0:QUEUE_DEPTH-1];
+  reg  [            63:0] q_timestamp                       [0:QUEUE_DEPTH-1];
 
-  reg  [  $clog2(QUEUE_DEPTH):0] q_count;
-  reg  [$clog2(QUEUE_DEPTH)-1:0] q_wr_ptr;
-  reg  [$clog2(QUEUE_DEPTH)-1:0] q_rd_ptr;
+  // replacing the $cloge2 for verilog 2001 std.
+  reg  [     PTR_WIDTH:0] q_count;
+  reg  [   PTR_WIDTH-1:0] q_wr_ptr;
+  reg  [   PTR_WIDTH-1:0] q_rd_ptr;
 
-  reg  [                   63:0] cycle_count;
+  reg  [            63:0] cycle_count;
 
-  wire                           q_full = (q_count == QUEUE_DEPTH);
-  wire                           q_empty = (q_count == 0);
+  wire                    q_full = (q_count == QUEUE_DEPTH);
+  wire                    q_empty = (q_count == 0);
 
   // ---------------------------------------------------------
   // (FSM) Signals
@@ -231,7 +247,9 @@ module tl_sram_ctrl #(
             // Error Detectiona
             if (q_addr[q_rd_ptr] >= MEM_SIZE_BYTES ||
                             alignment_error                    ||
-                           (q_opcode[q_rd_ptr] > 2)) begin
+                           !(q_opcode[q_rd_ptr] == OP_PUTFULL ||
+                             q_opcode[q_rd_ptr] == OP_PUTPART ||
+			     q_opcode[q_rd_ptr] == OP_GET)) begin
               act_error <= 1'b1;
             end else begin
               act_error <= 1'b0;
