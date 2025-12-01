@@ -38,11 +38,3 @@ jobs:
         run: |
           cd build
           ./run_sanity
-
-      - name: Upload Waveform (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: waveform
-          path: build/sanity.vcd
-          retention-days: 7
