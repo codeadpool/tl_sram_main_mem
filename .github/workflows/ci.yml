@@ -9,20 +9,40 @@ jobs:
       image: verilator/verilator:latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: Install Build Tools
-        run: apt-get update && apt-get install -y cmake build-essential git
+        run: |
+          apt-get update
+          apt-get install -y cmake build-essential git
 
       - name: Lint RTL
-        run: verilator --lint-only -Wall -Wno-UNUSED -Wno-PINCONNECTEMPTY -Irtl rtl/tl_sram_ctrl.v
+        run: |
+          verilator --lint-only \
+            -Wall \
+            -Wno-UNUSED \
+            -Wno-PINCONNECTEMPTY \
+            -Irtl \
+            rtl/tl_sram_ctrl.v \
+            rtl/tl_sram_storage.v
 
       - name: Build Simulation
         run: |
-          mkdir build
+          mkdir -p build
           cd build
           cmake ..
-          make -j4
+          make -j$(nproc)
 
       - name: Run Sanity Check
-        run: ./build/run_sanity
+        run: |
+          cd build
+          ./run_sanity
+
+      - name: Upload Waveform (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: waveform
+          path: build/sanity.vcd
+          retention-days: 7

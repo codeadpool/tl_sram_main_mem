@@ -18,7 +18,7 @@ set(VERILATOR_COMMON_ARGS
     --trace
     --cc
     -O3
-    -CFLAGS "-std=c++14"
+    -CFLAGS "-std=c++14 -DTRACE_ENABLED"
 )
 
 add_executable(run_sanity dv/verilator/tb_sanity.cpp)
